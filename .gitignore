@@ -1,0 +1,24 @@
+# Ignore Python virtual environments
+venv/
+
+# Ignore large model and binary files
+*.safetensors
+*.dylib
+*.so
+*.pt
+*.pth
+*.onnx
+
+# Ignore Python cache and bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore model checkpoints or temporary files
+*.ckpt
+*.tmp
+
+# VSCode and system files
+.vscode/
+.DS_Store

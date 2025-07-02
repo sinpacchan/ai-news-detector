@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>AI News Detector</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      width: 280px;
+      padding: 12px;
+      background: #f8f9fa;
+      color: #212529;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    /* Updated title styling */
+    .title-flex {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 0; /* remove default h3 margin */
+      font-size: 18px;
+      color: #343a40;
+    }
+
+    .title-emoji {
+      font-size: 18px;
+      line-height: 1;
+      display: inline-block;
+    }
+
+    .header-flex {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px; /* Added space below header */
+    }
+
+    .info-icon {
+      font-size: 18px;
+      color: #1976d2;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-decoration: none;
+      transition: background-color 0.2s ease;
+      display: flex;
+      align-items: center;
+    }
+
+    .info-icon:hover {
+      background-color: #e0f0ff;
+    }
+
+    button {
+      display: block;
+      width: 100%;
+      padding: 10px 12px;
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 15px;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    button:active {
+      background-color: #3e9142;
+    }
+
+    #clearResults {
+      background-color: #777;
+      margin-top: 10px;
+    }
+
+    #clearResults:hover {
+      background-color: #666;
+    }
+
+    #result {
+      font-size: 14px;
+      line-height: 1.5;
+      margin-top: 12px;
+    }
+
+    .toggle-container {
+      margin-top: 16px;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 24px;
+      vertical-align: middle;
+      margin-right: 10px;
+    }
+
+    .switch input {
+      display: none;
+    }
+
+    .slider {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #ccc;
+      border-radius: 24px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .slider:before {
+      content: "";
+      position: absolute;
+      height: 20px;
+      width: 20px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      border-radius: 50%;
+      transition: 0.3s;
+    }
+
+    input:checked + .slider {
+      background-color: #4caf50;
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(26px);
+    }
+
+    .label-row {
+      display: flex;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    #darkModeLabel {
+      font-weight: bold;
+      margin-left: 6px;
+      cursor: pointer;
+    }
+
+    #reportLink {
+      margin-top: 15px;
+      font-size: 14px;
+      color: #1976d2;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    #wordCount {
+      font-size: 12px;
+      opacity: 0.8;
+      margin-top: 5px;
+    }
+
+    /* Report Page */
+    #reportPage {
+      display: none;
+    }
+
+    #reportPage label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    #reportPage select {
+      width: 100%;
+      padding: 6px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      margin-top: 4px;
+    }
+
+    #reportPage button {
+      width: auto;
+      padding: 8px 12px;
+      margin-top: 10px;
+    }
+
+    #reportPage .button-group {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    #reportPage .button-group button {
+      width: 48%;
+    }
+
+    #reportStatus {
+      margin-top: 10px;
+      font-weight: bold;
+      color: green;
+    }
+
+    /* Buy Me a Coffee */
+    a.buymeacoffee {
+      display: block;
+      text-align: center;
+      margin-top: 16px;
+      font-weight: bold;
+      color: #000;
+      background-color: #FFDD00;
+      padding: 8px 12px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Detection Page -->
+  <div id="detectionPage" class="card">
+    <div class="header-flex">
+      <h3 class="title-flex">
+        <span class="title-emoji">🧠</span> AI News Detector
+      </h3>
+      <a href="info.html" target="_blank" title="What is this?" class="info-icon">ℹ️</a>
+    </div>
+    <button id="scan">Scan This Page</button>
+    <button id="clearResults">🧹 Clear Results</button>
+
+    <div id="result">
+      <p><strong>AI Detection:</strong> <span id="aiResult">No result yet</span></p>
+      <p><strong>Fake News Detection:</strong> <span id="fakeResult">No result yet</span></p>
+      <p id="wordCount"></p>
+    </div>
+
+    <div id="reportLink">Notice a mistake? Report it</div>
+
+    <!-- Toggles -->
+    <div class="toggle-container">
+      <div class="label-row">
+        <label class="switch">
+          <input type="checkbox" id="themeToggle" />
+          <span class="slider"></span>
+        </label>
+        <span id="darkModeLabel">🌙 Dark Mode</span>
+      </div>
+    </div>
+
+    <div class="toggle-container">
+      <div class="label-row">
+        <label class="switch">
+          <input type="checkbox" id="autoToggle" />
+          <span class="slider"></span>
+        </label>
+        <span>Auto Detect</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Report Page -->
+  <div id="reportPage" class="card">
+    <h3>Report a Mistake</h3>
+    <form id="reportForm">
+      <label>Detected AI Label:</label>
+      <div id="detectedAiLabel" style="font-weight: normal; margin-bottom: 8px;">-</div>
+
+      <label for="correctAi">Your correction for AI label:</label>
+      <select id="correctAi" required>
+        <option value="">-- Select --</option>
+        <option value="👤 Human-written">👤 Human-written</option>
+        <option value="🤖 AI-generated">🤖 AI-generated</option>
+      </select>
+
+      <label>Detected Fake News Label:</label>
+      <div id="detectedFakeLabel" style="font-weight: normal; margin-bottom: 8px;">-</div>
+
+      <label for="correctFake">Your correction for Fake label:</label>
+      <select id="correctFake" required>
+        <option value="">-- Select --</option>
+        <option value="✅ True information">✅ True information</option>
+        <option value="⚠️ Fake news">⚠️ Fake news</option>
+      </select>
+
+      <input type="hidden" id="reportText" />
+
+      <div class="button-group">
+        <button type="submit">Submit Report</button>
+        <button type="button" id="backBtn">Back</button>
+      </div>
+
+      <div id="reportStatus"></div>
+    </form>
+  </div>
+
+  <!-- Buy Me a Coffee Link (moved to bottom) -->
+  <a href="https://buymeacoffee.com/laslan07" target="_blank" class="buymeacoffee">
+    ☕ Buy me a coffee
+  </a>
+
+  <script src="popup.js"></script>
+</body>
+</html>
