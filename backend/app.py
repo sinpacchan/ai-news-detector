@@ -126,6 +126,10 @@ def reload_models():
     except Exception as e:
         print(f"❌ Failed to reload models: {e}")
         return jsonify({"error": f"Failed to reload models: {e}"}), 500
+    
+@app.route('/')
+def home():
+    return "Hello from Render!"
 
 if __name__ == "__main__":
     print("🚀 API running on http://localhost:5000")
