@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from transformers import BertTokenizer, BertForSequenceClassification
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 from flask_cors import CORS
 import os
@@ -9,16 +9,16 @@ import datetime
 app = Flask(__name__)
 CORS(app)
 
-# Model paths
-MODEL_PATH_AI = "./model_ai"
-MODEL_PATH_FAKE = "./model_fake"
+# Load models from Hugging Face Hub
+MODEL_ID_AI = "lvulpecula/ai-detector-ai"
+MODEL_ID_FAKE = "lvulpecula/ai-detector-fake"
 
 def load_models():
     global tokenizer_ai, tokenizer_fake, model_ai, model_fake
-    tokenizer_ai = BertTokenizer.from_pretrained(MODEL_PATH_AI)
-    tokenizer_fake = BertTokenizer.from_pretrained(MODEL_PATH_FAKE)
-    model_ai = BertForSequenceClassification.from_pretrained(MODEL_PATH_AI)
-    model_fake = BertForSequenceClassification.from_pretrained(MODEL_PATH_FAKE)
+    tokenizer_ai = AutoTokenizer.from_pretrained(MODEL_ID_AI)
+    tokenizer_fake = AutoTokenizer.from_pretrained(MODEL_ID_FAKE)
+    model_ai = AutoModelForSequenceClassification.from_pretrained(MODEL_ID_AI)
+    model_fake = AutoModelForSequenceClassification.from_pretrained(MODEL_ID_FAKE)
 
 load_models()
 
@@ -45,7 +45,6 @@ def predict():
     inputs_fake = tokenizer_fake(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
 
     with torch.no_grad():
-        # AI detection
         ai_logits = model_ai(**inputs_ai).logits[0]
         ai_diff = ai_logits[1] - ai_logits[0]
 
@@ -62,7 +61,6 @@ def predict():
             confidence_ai = get_confidence(ai_logits, 0)
             is_ai = False
 
-        # Fake news detection
         fake_logits = model_fake(**inputs_fake).logits[0]
         fake_diff = fake_logits[1] - fake_logits[0]
 
