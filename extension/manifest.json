@@ -27,5 +27,8 @@
       "run_at": "document_idle"
     }
   ],
-  "host_permissions": ["<all_urls>"]
+  "host_permissions": [
+    "https://ai-news-detector.onrender.com/*",
+    "<all_urls>"
+  ]
 }
