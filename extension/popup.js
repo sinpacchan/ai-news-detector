@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
+  const BASE_URL = "https://ai-news-detector.onrender.com";
   const scanBtn = document.getElementById("scan");
   const clearBtn = document.getElementById("clearResults");
   const themeToggle = document.getElementById("themeToggle");
@@ -128,7 +129,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     try {
-      const response = await fetch("http://localhost:5000/report", {
+      const response = await fetch(`${BASE_URL}/report`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -138,7 +139,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (response.ok) {
         reportStatusDiv.style.color = "green";
         reportStatusDiv.textContent = "\u2705 " + data.message;
-
         correctAiSelect.value = "";
         correctFakeSelect.value = "";
       } else {

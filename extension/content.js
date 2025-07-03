@@ -1,5 +1,7 @@
 console.log("🧠 AI Detector content script loaded");
 
+const BASE_URL = "https://ai-news-detector.onrender.com";
+
 // Smarter extraction fallback
 function extractText() {
   const article = document.querySelector("main article") ||
@@ -14,7 +16,7 @@ function extractText() {
 // Call backend for predictions
 async function sendForAnalysis(text) {
   try {
-    const res = await fetch("http://localhost:5000/predict", {
+    const res = await fetch(`${BASE_URL}/predict`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text: text })
@@ -63,7 +65,6 @@ function displayResultPopup(result) {
       ">×</button>
     `;
 
-    // Style popup container
     popup.style.position = "fixed";
     popup.style.bottom = "20px";
     popup.style.right = "20px";
@@ -144,14 +145,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return;
     }
 
-    fetch("http://localhost:5000/predict", {
+    fetch(`${BASE_URL}/predict`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text })
     })
     .then(res => res.json())
     .then(data => {
-      data.text = text; // attach original article for reporting
+      data.text = text;
       sendResponse(data);
       displayResultPopup(data);
     })
@@ -160,7 +161,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ error: "Request failed", text: text });
     });
 
-    return true; // Keep channel open for async response
+    return true;
   }
 
   if (message.action === "toggleDarkMode") {
