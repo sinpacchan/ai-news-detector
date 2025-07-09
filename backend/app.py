@@ -1,45 +1,35 @@
-from flask import Flask, request, jsonify
+import gradio as gr
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
-from flask_cors import CORS
-import os
-import json
 import datetime
 
-app = Flask(__name__)
-CORS(app)
-
-# Load models from Hugging Face Hub
+# Model names
 MODEL_ID_AI = "lvulpecula/ai-detector-ai"
 MODEL_ID_FAKE = "lvulpecula/ai-detector-fake"
-
-def load_models():
-    global tokenizer_ai, tokenizer_fake, model_ai, model_fake
-    tokenizer_ai = AutoTokenizer.from_pretrained(MODEL_ID_AI)
-    tokenizer_fake = AutoTokenizer.from_pretrained(MODEL_ID_FAKE)
-    model_ai = AutoModelForSequenceClassification.from_pretrained(MODEL_ID_AI)
-    model_fake = AutoModelForSequenceClassification.from_pretrained(MODEL_ID_FAKE)
-
-load_models()
 
 # Thresholds
 THRESHOLD_LOGIT_DIFF_AI = 1.5
 THRESHOLD_LOGIT_DIFF_FAKE = 1.5
 UNCERTAIN_MARGIN = 0.5
 
+# Load models and tokenizers
+tokenizer_ai = AutoTokenizer.from_pretrained(MODEL_ID_AI)
+model_ai = AutoModelForSequenceClassification.from_pretrained(MODEL_ID_AI)
+
+tokenizer_fake = AutoTokenizer.from_pretrained(MODEL_ID_FAKE)
+model_fake = AutoModelForSequenceClassification.from_pretrained(MODEL_ID_FAKE)
+
 def get_confidence(logits, positive_class=1):
     probs = torch.softmax(logits, dim=0)
     return probs[positive_class].item()
 
-@app.route("/predict", methods=["POST"])
-def predict():
-    data = request.get_json()
-    text = data.get("text", "").strip()
+def predict(text):
+    text = text.strip()
 
     if not text:
-        return jsonify({"error": "Empty input text."}), 400
+        return {"error": "Empty input text."}
     if len(text) < 30:
-        return jsonify({"error": "Text too short to analyze reliably."}), 400
+        return {"error": "Text too short to analyze reliably."}
 
     inputs_ai = tokenizer_ai(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
     inputs_fake = tokenizer_fake(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
@@ -77,7 +67,7 @@ def predict():
             confidence_fake = get_confidence(fake_logits, 0)
             is_fake = False
 
-    return jsonify({
+    return {
         "ai_label": ai_label,
         "confidence_ai": round(confidence_ai * 100, 2) if confidence_ai is not None else "N/A",
         "ai_logit_margin": round(ai_diff.item(), 3),
@@ -86,50 +76,16 @@ def predict():
         "confidence_fake": round(confidence_fake * 100, 2) if confidence_fake is not None else "N/A",
         "fake_logit_margin": round(fake_diff.item(), 3),
         "is_fake": is_fake
-    })
-
-@app.route("/report", methods=["POST"])
-def report_mistake():
-    data = request.get_json()
-    text = data.get("text", "").strip()
-
-    if not text:
-        return jsonify({"error": "Empty input text in feedback."}), 400
-
-    feedback = {
-        "timestamp": datetime.datetime.utcnow().isoformat(),
-        "text": text,
-        "model_ai_label": data.get("model_ai_label"),
-        "correct_ai_label": data.get("correct_ai_label"),
-        "model_fake_label": data.get("model_fake_label"),
-        "correct_fake_label": data.get("correct_fake_label")
     }
 
-    os.makedirs("feedback_logs", exist_ok=True)
-    filename = f"feedback_logs/report_{int(datetime.datetime.utcnow().timestamp() * 1000)}.json"
+# Gradio interface
+interface = gr.Interface(
+    fn=predict,
+    inputs=gr.Textbox(label="Article Text", lines=10, placeholder="Paste article text here..."),
+    outputs="json",
+    title="AI News Detector",
+    description="This tool predicts whether a news article is AI-generated and/or fake.",
+    allow_flagging="never"
+)
 
-    try:
-        with open(filename, "w", encoding="utf-8") as f:
-            json.dump(feedback, f, indent=2, ensure_ascii=False)
-        return jsonify({"message": "✅ Feedback saved. Thank you!"}), 200
-    except Exception as e:
-        return jsonify({"error": f"Failed to save feedback: {str(e)}"}), 500
-
-@app.route("/reload-models", methods=["POST"])
-def reload_models():
-    try:
-        load_models()
-        print("🔄 Models reloaded successfully.")
-        return jsonify({"message": "Models reloaded successfully."}), 200
-    except Exception as e:
-        print(f"❌ Failed to reload models: {e}")
-        return jsonify({"error": f"Failed to reload models: {e}"}), 500
-    
-@app.route('/')
-def home():
-    return "Hello from Render!"
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # fallback to 5000 for local dev
-    print(f"🚀 API running on http://localhost:{port}")
-    app.run(host="0.0.0.0", port=port)
+interface.launch()
