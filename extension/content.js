@@ -37,15 +37,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return;
     }
 
-    // Updated API endpoint and request body format
-    fetch("https://lvulpecula-ai-news-detector.hf.space/run/predict", {
+    // Corrected API endpoint URL with /api/predict/
+    fetch("https://lvulpecula-ai-news-detector.hf.space/api/predict/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ data: [text] })
     })
       .then(res => res.json())
       .then(data => {
-        // The HF Space usually returns predictions in data[0], adjust as needed
         const result = data?.data?.[0] || {};
 
         sendResponse({
