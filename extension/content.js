@@ -37,19 +37,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return;
     }
 
-    fetch("https://lvulpecula.hf.space/predict", {
+    // Updated API endpoint and request body format
+    fetch("https://lvulpecula-ai-news-detector.hf.space/run/predict", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text })
+      body: JSON.stringify({ data: [text] })
     })
       .then(res => res.json())
       .then(data => {
+        // The HF Space usually returns predictions in data[0], adjust as needed
+        const result = data?.data?.[0] || {};
+
         sendResponse({
           text,
-          ai_label: data.ai_label,
-          confidence_ai: data.confidence_ai,
-          fake_label: data.fake_label,
-          confidence_fake: data.confidence_fake
+          ai_label: result.ai_label || "N/A",
+          confidence_ai: result.confidence_ai || "N/A",
+          fake_label: result.fake_label || "N/A",
+          confidence_fake: result.confidence_fake || "N/A"
         });
       })
       .catch(err => {
