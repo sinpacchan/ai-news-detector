@@ -1,93 +1,66 @@
 console.log("🧠 AI Detector content script loaded");
 
-const BASE_URL = "https://huggingface.co/spaces/lvulpecula/ai-news-detector/run";
-
-// Smarter extraction fallback
 function extractText() {
-  const article = document.querySelector("main article") ||
-                  document.querySelector("article") ||
-                  document.querySelector("main") ||
-                  document.querySelector("body");
+  const candidates = [
+    "main article",
+    "article",
+    "div[data-testid='article-body']",
+    "div.article-body",
+    "section",
+    "body"
+  ];
 
-  if (!article) return "";
-  return article.innerText.trim();
-}
-
-// Call backend for predictions
-async function sendForAnalysis(text) {
-  try {
-    const res = await fetch(`${BASE_URL}/predict`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: [text] })  // Gradio expects `data: [text]`
-    });
-
-    const json = await res.json();
-    const result = json.data[0];  // unwrap from Gradio response
-
-    console.log("Prediction result:", result);
-
-    displayResultPopup(result);
-  } catch (err) {
-    console.error("Error communicating with backend:", err);
+  for (let selector of candidates) {
+    const el = document.querySelector(selector);
+    if (el && el.innerText.trim().length > 100) {
+      return el.innerText.trim();
+    }
   }
+
+  const paragraphs = Array.from(document.querySelectorAll("p"))
+    .map(p => p.innerText.trim())
+    .filter(Boolean);
+
+  if (paragraphs.length > 0) {
+    return paragraphs.join("\n\n");
+  }
+
+  return null;
 }
 
-// ... (rest of your code unchanged) ...
-
-// Listener from popup.js
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === "scan") {
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === "scan") {
     const text = extractText();
 
-    if (text.length < 100) {
-      sendResponse({ error: "Not enough text", text: text });
+    if (!text) {
+      sendResponse({ error: "No article text found" });
       return;
     }
 
-    fetch(`${BASE_URL}/predict`, {
+    fetch("https://lvulpecula.hf.space/predict", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: [text] })  // Gradio format
+      body: JSON.stringify({ text })
     })
-    .then(res => res.json())
-    .then(json => {
-      const data = json.data[0];
-      data.text = text;
-      sendResponse(data);
-      displayResultPopup(data);
-    })
-    .catch(err => {
-      console.error("Fetch error:", err);
-      sendResponse({ error: "Request failed", text: text });
-    });
+      .then(res => res.json())
+      .then(data => {
+        sendResponse({
+          text,
+          ai_label: data.ai_label,
+          confidence_ai: data.confidence_ai,
+          fake_label: data.fake_label,
+          confidence_fake: data.confidence_fake
+        });
+      })
+      .catch(err => {
+        console.error("❌ Fetch failed", err);
+        sendResponse({ error: "Backend fetch failed" });
+      });
 
-    return true;
+    return true; // Keep sendResponse alive
   }
 
-  if (message.action === "toggleDarkMode") {
-    if (message.enabled) {
-      document.body.classList.add("ai-detector-darkmode");
-    } else {
-      document.body.classList.remove("ai-detector-darkmode");
-    }
+  if (request.action === "toggleDarkMode") {
+    document.documentElement.classList.toggle("dark-mode", request.enabled);
   }
-});
-
-// Auto-detect & dark mode setup
-window.addEventListener("load", () => {
-  addScanButton();
-
-  chrome.storage.local.get(["autoDetect", "darkMode"], (result) => {
-    if (result.darkMode) {
-      document.body.classList.add("ai-detector-darkmode");
-    }
-
-    if (result.autoDetect) {
-      const text = extractText();
-      if (text.length > 100) {
-        sendForAnalysis(text);
-      }
-    }
-  });
 });
