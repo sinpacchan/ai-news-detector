@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const BASE_URL = "https://huggingface.co/spaces/lvulpecula/ai-news-detector/run";
+  const BASE_URL = "https://lvulpecula-ai-news-detector.hf.space";
   const scanBtn = document.getElementById("scan");
   const clearBtn = document.getElementById("clearResults");
   const themeToggle = document.getElementById("themeToggle");
