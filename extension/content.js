@@ -1,6 +1,6 @@
 console.log("🧠 AI Detector content script loaded");
 
-const BASE_URL = "https://ai-news-detector.onrender.com";
+const BASE_URL = "https://huggingface.co/spaces/lvulpecula/ai-news-detector/run";
 
 // Smarter extraction fallback
 function extractText() {
@@ -19,10 +19,12 @@ async function sendForAnalysis(text) {
     const res = await fetch(`${BASE_URL}/predict`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: text })
+      body: JSON.stringify({ data: [text] })  // Gradio expects `data: [text]`
     });
 
-    const result = await res.json();
+    const json = await res.json();
+    const result = json.data[0];  // unwrap from Gradio response
+
     console.log("Prediction result:", result);
 
     displayResultPopup(result);
@@ -31,109 +33,7 @@ async function sendForAnalysis(text) {
   }
 }
 
-// Floating popup renderer
-function displayResultPopup(result) {
-  const existing = document.getElementById("ai-detector-popup");
-  if (existing) existing.remove();
-
-  chrome.storage.local.get("darkMode", (data) => {
-    const isDarkMode = data.darkMode || false;
-
-    const confidenceAI = result.confidence_ai === "N/A" ? "N/A" : result.confidence_ai + "%";
-    const confidenceFake = result.confidence_fake === "N/A" ? "N/A" : result.confidence_fake + "%";
-
-    const popup = document.createElement("div");
-    popup.id = "ai-detector-popup";
-
-    popup.innerHTML = `
-      <strong>🧠 AI Detector Result</strong><br>
-      ${result.ai_label} <em>(${confidenceAI})</em><br>
-      ${result.fake_label} <em>(${confidenceFake})</em>
-      <button id="close-ai-popup" title="Close" style="
-        position: absolute;
-        top: 6px;
-        right: 8px;
-        background: transparent;
-        border: none;
-        color: ${isDarkMode ? "#ddd" : "#333"};
-        font-weight: bold;
-        font-size: 18px;
-        line-height: 1;
-        cursor: pointer;
-        transition: color 0.2s ease;
-        user-select: none;
-      ">×</button>
-    `;
-
-    popup.style.position = "fixed";
-    popup.style.bottom = "20px";
-    popup.style.right = "20px";
-    popup.style.padding = "14px 20px";
-    popup.style.backgroundColor = isDarkMode ? "#222" : "#fff";
-    popup.style.color = isDarkMode ? "#ddd" : "#333";
-    popup.style.fontSize = "15px";
-    popup.style.lineHeight = "1.6";
-    popup.style.borderRadius = "10px";
-    popup.style.boxShadow = isDarkMode
-      ? "0 4px 12px rgba(0, 0, 0, 0.8)"
-      : "0 4px 12px rgba(0, 0, 0, 0.15)";
-    popup.style.zIndex = "9999";
-    popup.style.maxWidth = "280px";
-    popup.style.opacity = "1";
-    popup.style.transition = "opacity 0.3s";
-    popup.style.border = isDarkMode ? "1px solid #444" : "1px solid #ddd";
-
-    document.body.appendChild(popup);
-
-    const closeBtn = document.getElementById("close-ai-popup");
-    closeBtn.onmouseover = () => (closeBtn.style.color = "#f44336");
-    closeBtn.onmouseout = () => (closeBtn.style.color = isDarkMode ? "#ddd" : "#333");
-    closeBtn.onclick = () => {
-      popup.style.opacity = "0";
-      setTimeout(() => popup.remove(), 300);
-    };
-
-    setTimeout(() => {
-      if (document.getElementById("ai-detector-popup")) {
-        popup.style.opacity = "0";
-        setTimeout(() => popup.remove(), 300);
-      }
-    }, 12000);
-  });
-}
-
-// Add persistent floating scan button
-function addScanButton() {
-  const existing = document.getElementById("ai-detector-btn");
-  if (existing) return;
-
-  const button = document.createElement("button");
-  button.id = "ai-detector-btn";
-  button.textContent = "🔍 Scan Article";
-  button.style.position = "fixed";
-  button.style.bottom = "20px";
-  button.style.left = "20px";
-  button.style.padding = "10px 16px";
-  button.style.backgroundColor = "#1976d2";
-  button.style.color = "#fff";
-  button.style.fontSize = "14px";
-  button.style.border = "none";
-  button.style.borderRadius = "6px";
-  button.style.cursor = "pointer";
-  button.style.zIndex = "9999";
-  button.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.2)";
-
-  button.onclick = () => {
-    const text = extractText();
-    if (text.length > 100) {
-      sendForAnalysis(text);
-    } else {
-      alert("Not enough text found to analyze.");
-    }
-  };
-
-  document.body.appendChild(button);
-}
+// ... (rest of your code unchanged) ...
 
 // Listener from popup.js
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -148,10 +48,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     fetch(`${BASE_URL}/predict`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text })
+      body: JSON.stringify({ data: [text] })  // Gradio format
     })
     .then(res => res.json())
-    .then(data => {
+    .then(json => {
+      const data = json.data[0];
       data.text = text;
       sendResponse(data);
       displayResultPopup(data);
