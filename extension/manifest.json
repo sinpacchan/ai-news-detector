@@ -28,7 +28,7 @@
     }
   ],
   "host_permissions": [
-    "https://ai-news-detector.onrender.com/*",
+    "https://huggingface.co/spaces/lvulpecula/ai-news-detector/*",
     "<all_urls>"
   ]
 }
