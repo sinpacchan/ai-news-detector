@@ -13,6 +13,7 @@ function extractText() {
   for (let selector of candidates) {
     const el = document.querySelector(selector);
     if (el && el.innerText.trim().length > 100) {
+      console.log(`✅ Extracted content from: ${selector}`);
       return el.innerText.trim();
     }
   }
@@ -22,9 +23,11 @@ function extractText() {
     .filter(Boolean);
 
   if (paragraphs.length > 0) {
+    console.log("✅ Fallback: Extracted from paragraphs");
     return paragraphs.join("\n\n");
   }
 
+  console.warn("⚠️ No suitable text found on the page.");
   return null;
 }
 
@@ -37,30 +40,30 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return;
     }
 
-    // Corrected API endpoint URL with /api/predict/
-    fetch("https://lvulpecula-ai-news-detector.hf.space/api/predict/", {
+    fetch("http://localhost:5000/predict", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: [text] })
+      body: JSON.stringify({ text })
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`Server responded with status ${res.status}`);
+        return res.json();
+      })
       .then(data => {
-        const result = data?.data?.[0] || {};
-
         sendResponse({
           text,
-          ai_label: result.ai_label || "N/A",
-          confidence_ai: result.confidence_ai || "N/A",
-          fake_label: result.fake_label || "N/A",
-          confidence_fake: result.confidence_fake || "N/A"
+          ai_label: data.ai_label,
+          confidence_ai: data.confidence_ai,
+          fake_label: data.fake_label,
+          confidence_fake: data.confidence_fake
         });
       })
       .catch(err => {
         console.error("❌ Fetch failed", err);
-        sendResponse({ error: "Backend fetch failed" });
+        sendResponse({ error: "Backend fetch failed: " + err.message });
       });
 
-    return true; // Keep sendResponse alive
+    return true; // Keep sendResponse alive asynchronously
   }
 
   if (request.action === "toggleDarkMode") {

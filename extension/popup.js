@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const BASE_URL = "https://lvulpecula-ai-news-detector.hf.space";
+  const BASE_URL = "http://localhost:5000"; // changed from HF space to local server
   const scanBtn = document.getElementById("scan");
   const clearBtn = document.getElementById("clearResults");
   const themeToggle = document.getElementById("themeToggle");
@@ -36,12 +36,11 @@ document.addEventListener("DOMContentLoaded", () => {
   chrome.storage.local.get(["darkMode", "autoDetect"], (data) => {
     themeToggle.checked = data.darkMode || false;
     autoToggle.checked = data.autoDetect || false;
-
     updateDarkMode(data.darkMode);
   });
 
   function updateDarkMode(enabled) {
-    const modeText = enabled ? "\u2600\ufe0f Light Mode" : "\ud83c\udf19 Dark Mode";
+    const modeText = enabled ? "☀️ Light Mode" : "🌙 Dark Mode";
     darkModeLabel.textContent = modeText;
 
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -110,13 +109,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!correctAi && !correctFake) {
       reportStatusDiv.style.color = "red";
-      reportStatusDiv.textContent = "\u274c Please select at least one correction.";
+      reportStatusDiv.textContent = "❌ Please select at least one correction.";
       return;
     }
 
     if (!currentPrediction.text) {
       reportStatusDiv.style.color = "red";
-      reportStatusDiv.textContent = "\u274c No article scanned to report.";
+      reportStatusDiv.textContent = "❌ No article scanned to report.";
       return;
     }
 
@@ -138,7 +137,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await response.json();
       if (response.ok) {
         reportStatusDiv.style.color = "green";
-        reportStatusDiv.textContent = "\u2705 " + data.message;
+        reportStatusDiv.textContent = "✅ " + data.message;
         correctAiSelect.value = "";
         correctFakeSelect.value = "";
       } else {
@@ -146,28 +145,29 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } catch (error) {
       reportStatusDiv.style.color = "red";
-      reportStatusDiv.textContent = "\u274c Failed to send report.";
+      reportStatusDiv.textContent = "❌ Failed to send report.";
       console.error("Report error:", error);
     }
   });
 
   function scanAndDisplay() {
-    aiResultSpan.textContent = "\ud83d\udd0e Scanning article...";
+    aiResultSpan.textContent = "🔎 Scanning article...";
     fakeResultSpan.textContent = "";
     reportStatusDiv.textContent = "";
     wordCountP.textContent = "";
 
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs.length === 0) {
-        aiResultSpan.textContent = "\u274c No active tab found.";
+        aiResultSpan.textContent = "❌ No active tab found.";
         return;
       }
 
       chrome.tabs.sendMessage(tabs[0].id, { action: "scan" }, (response) => {
         if (!response || response.error) {
-          aiResultSpan.textContent = "\u274c Could not scan the article.";
+          aiResultSpan.textContent = "❌ Could not scan the article.";
           fakeResultSpan.textContent = "";
           currentPrediction = { text: "", ai_label: "", confidence_ai: "", fake_label: "", confidence_fake: "" };
+          console.error("Scan error:", response?.error);
         } else {
           currentPrediction = {
             text: response.text || "",
@@ -177,11 +177,14 @@ document.addEventListener("DOMContentLoaded", () => {
             confidence_fake: response.confidence_fake || "N/A"
           };
 
-          aiResultSpan.textContent = `${currentPrediction.ai_label} (${currentPrediction.confidence_ai}%)`;
-          fakeResultSpan.textContent = `${currentPrediction.fake_label} (${currentPrediction.confidence_fake}%)`;
+          aiResultSpan.textContent = `${currentPrediction.ai_label}` +
+            (currentPrediction.confidence_ai !== "N/A" ? ` (${currentPrediction.confidence_ai}%)` : "");
+
+          fakeResultSpan.textContent = `${currentPrediction.fake_label}` +
+            (currentPrediction.confidence_fake !== "N/A" ? ` (${currentPrediction.confidence_fake}%)` : "");
 
           const wordCount = countWords(currentPrediction.text);
-          wordCountP.textContent = `\ud83d\udcdd Word count: ${wordCount}`;
+          wordCountP.textContent = `📝 Word count: ${wordCount}`;
         }
       });
     });
@@ -191,8 +194,12 @@ document.addEventListener("DOMContentLoaded", () => {
     detectionPage.style.display = "none";
     reportPage.style.display = "block";
 
-    detectedAiLabelDiv.textContent = `${currentPrediction.ai_label} (${currentPrediction.confidence_ai}%)`;
-    detectedFakeLabelDiv.textContent = `${currentPrediction.fake_label} (${currentPrediction.confidence_fake}%)`;
+    detectedAiLabelDiv.textContent = `${currentPrediction.ai_label}` +
+      (currentPrediction.confidence_ai !== "N/A" ? ` (${currentPrediction.confidence_ai}%)` : "");
+
+    detectedFakeLabelDiv.textContent = `${currentPrediction.fake_label}` +
+      (currentPrediction.confidence_fake !== "N/A" ? ` (${currentPrediction.confidence_fake}%)` : "");
+
     reportTextInput.value = currentPrediction.text;
 
     reportStatusDiv.textContent = "";

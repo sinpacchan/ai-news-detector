@@ -3,7 +3,7 @@
   "name": "AI News Detector",
   "version": "1.0",
   "description": "Detects AI-generated or fake news articles.",
-  "permissions": ["storage", "scripting", "activeTab"],
+  "permissions": ["storage", "scripting", "activeTab", "tabs"],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
@@ -28,7 +28,7 @@
     }
   ],
   "host_permissions": [
-    "https://huggingface.co/spaces/lvulpecula/ai-news-detector/*",
+    "http://localhost:5000/*",
     "<all_urls>"
   ]
 }
